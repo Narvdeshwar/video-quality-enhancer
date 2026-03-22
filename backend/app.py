@@ -5,7 +5,8 @@ import shutil
 import os
 import uuid
 import threading
-from typing import Dict
+import queue
+from typing import Dict, List
 from ffmpeg_utils import extract_frames, merge_video
 from upscale import upscale_sequence
 
@@ -21,7 +22,7 @@ OUTPUT_DIR = os.path.join(STORAGE_ROOT, "output")
 for d in [UPLOAD_DIR, FRAMES_DIR, OUTPUT_DIR]:
     os.makedirs(d, exist_ok=True)
 
-# Add CORS to allow frontend communication
+# Add CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,6 +33,21 @@ app.add_middleware(
 
 # Progress tracking
 jobs: Dict[str, Dict] = {}
+job_queue = queue.Queue()
+
+def worker():
+    """Background worker to process jobs sequentially (Phase 6: Batching)"""
+    while True:
+        job = job_queue.get()
+        if job is None:
+            break
+        try:
+            # Ensure job is a string before passing to process_video_task
+            job_id = str(job)
+            process_video_task(job_id)
+        finally:
+            job_queue.task_done()
+
 
 def process_video_task(job_id: str):
     try:
@@ -45,18 +61,17 @@ def process_video_task(job_id: str):
         processed_dir = os.path.join(FRAMES_DIR, f"{job_id}_output")
         extract_frames(video_path, extract_dir)
         
-        # 2. AI Upscale (Phase 5: Batching & Tiling)
-        job["status"] = "AI Upscaling (Real-ESRGAN)"
+        # 2. AI Upscale
+        job["status"] = "AI Upscaling"
         job["progress"] = 30
         
-        # We need a progress callback for upscale_sequence
         def update_progress(p):
-            job["progress"] = 30 + (p * 0.6) # Scale 30-90%
+            job["progress"] = 30 + (p * 0.6)
             
         upscale_sequence(extract_dir, processed_dir, progress_callback=update_progress)
         
         # 3. Merge Output
-        job["status"] = "Finalizing Video"
+        job["status"] = "Finalizing"
         job["progress"] = 90
         output_file = os.path.join(OUTPUT_DIR, f"{job_id}_upscaled.mp4")
         merge_video(processed_dir, output_file, original_video_path=video_path)
@@ -64,55 +79,64 @@ def process_video_task(job_id: str):
         # 4. Success
         job["status"] = "completed"
         job["progress"] = 100
-        
-        # Cleanup input frames (optional optimization)
-        # shutil.rmtree(extract_dir)
-        # shutil.rmtree(processed_dir)
-        
     except Exception as e:
-        print(f"ERROR in job {job_id}: {str(e)}")
+        print(f"ERROR: {str(e)}")
         jobs[job_id]["status"] = "failed"
+        jobs[job_id]["error"] = str(e)
+
+# Start worker thread
+worker_thread = threading.Thread(target=worker, daemon=True)
+worker_thread.start()
 
 @app.post("/upload")
 async def upload_video(file: UploadFile = File(...)):
     job_id = str(uuid.uuid4())
-    file_extension = os.path.splitext(file.filename)[1]
+    filename = file.filename
+    file_extension = os.path.splitext(filename)[1]
     file_path = os.path.join(UPLOAD_DIR, f"{job_id}{file_extension}")
     
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    jobs[job_id] = {"status": "uploaded", "progress": 0, "path": file_path}
-    return {"job_id": job_id, "message": "Video uploaded successfully"}
+    jobs[job_id] = {
+        "id": job_id,
+        "filename": filename,
+        "status": "uploaded",
+        "progress": 0,
+        "path": file_path
+    }
+    return {"job_id": job_id, "message": "Uploaded"}
 
 @app.post("/process/{job_id}")
 async def start_processing(job_id: str):
     if job_id not in jobs:
-        raise HTTPException(status_code=404, detail="Job not found")
+        raise HTTPException(status_code=404)
     
-    if jobs[job_id]["status"] == "processing":
-        return {"status": "already_processing"}
+    if jobs[job_id]["status"] in ["Extracting", "AI Upscaling", "Finalizing", "processing"]:
+        return {"status": "already_queued"}
         
-    # Start thread
-    thread = threading.Thread(target=process_video_task, args=(job_id,))
-    thread.start()
-    
-    return {"status": "started", "job_id": job_id}
+    jobs[job_id]["status"] = "queued"
+    job_queue.put(job_id)
+    return {"status": "queued", "job_id": job_id}
+
+@app.get("/jobs")
+async def list_jobs():
+    return list(jobs.values())
 
 @app.get("/progress/{job_id}")
 async def get_progress(job_id: str):
     if job_id not in jobs:
-        raise HTTPException(status_code=404, detail="Job not found")
-    return {"status": jobs[job_id]["status"], "progress": round(jobs[job_id].get("progress", 0), 1)}
+        raise HTTPException(status_code=404)
+    return jobs[job_id]
 
 @app.get("/download/{job_id}")
 async def download_output(job_id: str):
     if job_id not in jobs or jobs[job_id]["status"] != "completed":
-        raise HTTPException(status_code=404, detail="Output not ready")
-    
-    output_path = os.path.join(OUTPUT_DIR, f"{job_id}_upscaled.mp4")
-    return FileResponse(output_path, media_type="video/mp4", filename=f"upscaled_{job_id}.mp4")
+        raise HTTPException(status_code=404)
+    path = os.path.join(OUTPUT_DIR, f"{job_id}_upscaled.mp4")
+    return FileResponse(path, media_type="video/mp4", filename=f"upscaled_{jobs[job_id]['filename']}")
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+

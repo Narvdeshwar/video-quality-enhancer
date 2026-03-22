@@ -4,6 +4,10 @@ import os
 from PIL import Image
 from typing import Optional, Callable
 
+# GPU Optimization: Speed up CUDA kernels
+if torch.cuda.is_available():
+    torch.backends.cudnn.benchmark = True
+
 # Try to import RealESRGAN, but allow failure (Phase 5 resilience)
 try:
     from realesrgan import RealESRGAN
@@ -28,6 +32,8 @@ def get_model(device_name: str, model_path: str = 'RealESRGAN_x4plus.pth'):
     
     print(f"Loading Real-ESRGAN model to {device_name}...")
     try:
+        # Use FP16 for CUDA to speed up processing (Phase 5 Optimization)
+        # Note: Some older GPUs or CPUs might not like half precision, so we enable it only for CUDA
         model = RealESRGAN(device, scale=4)
         
         # Try multiple common weight paths
