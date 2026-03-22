@@ -1,3 +1,8 @@
+# 🎥 Video Quality Enhancer (AI Video Upscaler)
+
+[![Project Status](https://img.shields.io/badge/status-active--development-orange.svg)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 # 🗺️ Project Roadmap & Progress
 
 This document tracks the evolution of the **Video Quality Enhancer**. Our focus is on providing a high-performance, local-first AI upscaling experience.
@@ -35,3 +40,8 @@ This document tracks the evolution of the **Video Quality Enhancer**. Our focus 
 *Last Updated: 2026-03-22*
 
 *Created with ❤️ by **Narvdeshwar***
+
+---
+
+## 📄 License
+This project is licensed under the **MIT License**. Feel free to use and distribute it for personal and commercial purposes.
