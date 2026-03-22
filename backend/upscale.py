@@ -8,21 +8,20 @@ from typing import Optional, Callable
 if torch.cuda.is_available():
     torch.backends.cudnn.benchmark = True
 
-# Try to import RealESRGAN, but allow failure (Phase 5 resilience)
 try:
-    from realesrgan import RealESRGAN
+    from realesrgan import RealESRGANer
 except ImportError:
-    RealESRGAN = None
-    print("WARNING: 'realesrgan' library not found. AI upscaling will be disabled.")
+    RealESRGANer = None
+    print("WARNING: 'realesrgan' library (xinntao version) not found. AI upscaling will be disabled.")
 
 # Global model instance
 _model_instance = None
 _last_device = None
 
-def get_model(device_name: str, model_path: str = 'RealESRGAN_x4plus.pth'):
+def get_model(device_name: str, model_path: str = 'RealESRGAN_x4.pth'):
     global _model_instance, _last_device
     
-    if RealESRGAN is None:
+    if RealESRGANer is None:
         return None
         
     device = torch.device(device_name)
@@ -30,31 +29,52 @@ def get_model(device_name: str, model_path: str = 'RealESRGAN_x4plus.pth'):
     if _model_instance is not None and _last_device == device_name:
         return _model_instance
     
-    print(f"Loading Real-ESRGAN model to {device_name}...")
+    print(f"Initializing Real-ESRGAN (version 0.3.0) on {device_name}...")
     try:
-        # Use FP16 for CUDA to speed up processing (Phase 5 Optimization)
-        # Note: Some older GPUs or CPUs might not like half precision, so we enable it only for CUDA
-        model = RealESRGAN(device, scale=4)
+        # Phase 5: FP16 Optimization & Tiling
+        # We use tile=400 to prevent OOM on typical GPUs while maintaining speed.
+        # half=True is used for CUDA to leverage FP16 performance.
+        is_cuda = (device_name == 'cuda')
         
-        # Try multiple common weight paths
+        # Determine weight path
+        # RealESRGANer expects the model architecture to be set up.
+        # We need a model structure. For x4plus, we use RRDBNet.
+        from basicsr.archs.rrdbnet_arch import RRDBNet
+        model_arch = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
+        
+        # Try multiple paths for weights
         possible_paths = [model_path, 'RealESRGAN_x4.pth', 'backend/RealESRGAN_x4plus.pth']
-        loaded = False
+        final_path = None
         for p in possible_paths:
             if os.path.exists(p):
-                model.load_weights(p)
-                loaded = True
-                print(f"Loaded weights from {p}")
+                final_path = p
                 break
         
-        _model_instance = model
+        if not final_path:
+            raise FileNotFoundError("Could not find RealESRGAN weight files (.pth)")
+
+        upsampler = RealESRGANer(
+            scale=4,
+            model_path=final_path,
+            model=model_arch,
+            tile=400,     # Phase 5: Tiling (400x400)
+            tile_pad=10,
+            pre_pad=0,
+            half=is_cuda, # Phase 5: FP16 (Half precision)
+            device=device
+        )
+        
+        _model_instance = upsampler
         _last_device = device_name
-        return model
+        return upsampler
     except Exception as e:
-        print(f"FAILED to load model: {str(e)}")
+        print(f"FAILED to initialize upscaler: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return None
 
-def upscale_image(image_path: str, output_path: str, model):
-    if model is None:
+def upscale_image(image_path: str, output_path: str, upsampler):
+    if upsampler is None:
         # Fallback: Just resize if AI is missing (Phase 5 safety)
         img = Image.open(image_path)
         img = img.resize((img.width * 4, img.height * 4), Image.LANCZOS)
@@ -62,8 +82,16 @@ def upscale_image(image_path: str, output_path: str, model):
         return
 
     try:
-        sr = model.predict(Image.open(image_path))
-        sr.save(output_path)
+        # Load image with OpenCV (as expected by RealESRGANer)
+        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+        if img is None:
+            raise ValueError(f"Failed to read image at {image_path}")
+            
+        # Enhance with RealESRGANer
+        output, _ = upsampler.enhance(img, outscale=4)
+        
+        # Save output
+        cv2.imwrite(output_path, output)
     except Exception as e:
         print(f"Upscale error on frame: {str(e)}")
         # Quick fallback if a specific frame fails

@@ -5,8 +5,6 @@
   "scripts": {
     "frontend": "npm run dev --prefix frontend",
     "backend": "cd backend && venv\\Scripts\\activate && python app.py",
-    "electron": "npm run electron --prefix frontend",
-    "electron:build": "npm run electron:build --prefix frontend",
     "setup": "npm install && npm run setup:frontend && npm run setup:backend",
     "setup:frontend": "npm install --prefix frontend",
     "setup:backend": "cd backend && python -m venv venv && venv\\Scripts\\activate && pip install -r requirements.txt",
