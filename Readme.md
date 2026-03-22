@@ -1,142 +1,107 @@
-🚀 PROJECT: AI VIDEO UPSCALER (4K) – FULL ROADMAP
-🎯 Goal
+# 🎥 Video Quality Enhancer (AI Video Upscaler)
 
-Build a desktop app (UI-based) that:
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100.0%2B-green.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18.x-61DAFB.svg)](https://reactjs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Uploads video 🎬
-Upscales using AI (Real-ESRGAN)
-Outputs 4K video
-Shows progress + preview
-🧱 PHASE 1: PROJECT SETUP (Day 1)
-✅ Tech Stack
-Layer	Tech
-Backend	Python (FastAPI)
-AI Model	Real-ESRGAN
-Video Processing	FFmpeg
-Frontend	React.js
-UI Framework	Tailwind / ShadCN
-Packaging	Electron (optional)
-📁 Folder Structure
+Transform low-resolution videos into stunning high-definition masterpieces using state-of-the-art **Real-ESRGAN** AI models. This full-stack application provides a seamless, local-first experience for video enhancement.
+
+---
+
+## ✨ Features
+
+- **🚀 4x AI Super-Resolution**: Upscale footage from 480p to 4K with intelligent detail reconstruction.
+- **🖼️ Frame-by-Frame Processing**: Precision extraction and AI-driven enhancement for every single frame.
+- **⚡ Real-Time Progress**: Interactive dashboard showing current stage (Extraction, AI Processing, Merging).
+- **🔒 Local & Private**: All video processing stays on your machine—no cloud uploads required.
+- **🎨 Modern UI**: Sleek, responsive interface built with React and Tailwind CSS.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology | Description |
+| :--- | :--- | :--- |
+| **Frontend** | **React.js + Vite** | Dynamic & fast dashboard interface. |
+| **Backend** | **FastAPI** | High-performance Python async API. |
+| **AI Model** | **Real-ESRGAN** | Deep learning model for 4x upscaling. |
+| **Deep Learning** | **PyTorch** | Backend for AI model execution (supports CUDA). |
+| **Video Ops** | **FFmpeg & OpenCV** | Frame extraction and high-quality merging. |
+| **Styling** | **Tailwind CSS** | Premium, modern design system. |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **Node.js**: v20.x or higher
+- **Python**: 3.10 or higher
+- **FFmpeg**: (Optional, handled by Python libraries)
+
+### Quick Start (Windows)
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/Narvdeshwar/video-quality-enhancer.git
+   cd video-quality-enhancer
+   ```
+
+2. **Start Backend**:
+   Double-click `start_backend.bat`. It will set up the virtual environment and install AI weight files.
+
+3. **Start Frontend**:
+   Double-click `start_frontend.bat`. It will install UI dependencies and launch the dev server.
+
+4. **Enhance!**:
+   Navigate to `http://localhost:5173` in your browser.
+
+---
+
+## 📂 Project Architecture
+
+```
 ai-upscaler/
-│
-├── backend/
-│   ├── app.py
-│   ├── upscale.py
-│   ├── ffmpeg_utils.py
-│   ├── requirements.txt
-│
-├── frontend/
-│   ├── src/
-│   ├── components/
-│   ├── pages/
-│
-├── storage/
-│   ├── uploads/
-│   ├── frames/
-│   ├── output/
-│
-└── README.md
-⚙️ PHASE 2: CORE BACKEND (Day 2–3)
-🎯 Features
-Upload video
-Extract frames
-AI upscale
-Merge video
-✅ API Design (FastAPI)
-1. Upload API
-POST /upload
-2. Start Processing
-POST /process
-3. Progress API
-GET /progress/{job_id}
-4. Download Output
-GET /download/{job_id}
-🧠 Core Logic Flow
-Upload → Extract Frames → Upscale → Merge → Output
-🔥 Backend Pipeline
-Step 1: Extract Frames
-ffmpeg -i input.mp4 frames/frame_%05d.png
-Step 2: Upscale (Python)
-Use Real-ESRGAN
-Add tiling for your GPU
-Step 3: Merge Video
-ffmpeg -framerate 30 -i frames/frame_%05d.png -c:v libx264 output.mp4
-🧠 PHASE 3: AI ENGINE (Day 3)
-✅ Requirements
-pip install realesrgan torch opencv-python
-🔥 Upscale Module (upscale.py)
-from realesrgan import RealESRGAN
-import torch
-from PIL import Image
+├── backend/          # FastAPI server & AI logic
+│   ├── app.py        # API endpoints
+│   ├── upscale.py    # Real-ESRGAN integration
+│   └── requirements.txt
+├── frontend/         # React application (Vite)
+├── storage/          # Temporary & output files
+│   ├── uploads/      # User-uploaded videos
+│   ├── frames/       # Temporary frames during processing
+│   └── output/       # Final upscaled videos
+└── scripts/          # Automation & utility scripts
+```
 
-device = torch.device('cuda')
+---
 
-model = RealESRGAN(device, scale=4)
-model.load_weights('RealESRGAN_x4.pth')
+## 🧠 How the AI Works
 
-def upscale_image(input_path, output_path):
-    img = Image.open(input_path)
-    sr = model.predict(img)
-    sr.save(output_path)
-🎨 PHASE 4: FRONTEND UI (Day 4–5)
-🎯 Pages
-1. Upload Page
-Drag & drop video
-Show file info
-2. Processing Page
-Progress bar
-Frame count
-ETA
-3. Result Page
-Video preview
-Download button
-🧩 Key Components
-FileUploader
-ProgressBar
-VideoPlayer
-StatusCard
-🔥 Example UI Flow
-[ Upload Video ]
-        ↓
-[ Processing... ██████ 60% ]
-        ↓
-[ Preview + Download ]
-⚡ PHASE 5: PERFORMANCE OPTIMIZATION (Day 5–6)
-✅ Must Implement
-🔹 Frame batching
-🔹 GPU tiling
-🔹 Multi-threading
-🔹 Queue system
-🧠 Worker Queue (IMPORTANT)
+The enhancer follows a 4-step pipeline:
+1. **Extraction**: `FFmpeg` deconstructs the video into high-quality PNG frame sequences.
+2. **AI Inference**: Each frame is passed through the `Real-ESRGAN` model using **Tiling** (to prevent GPU memory overflow).
+3. **Reconstruction**: `FFmpeg` merges the upscaled frames back into an `.mp4` container.
+4. **Finalization**: Metadata and audio (if present) are mapped back to the output video.
 
-Use:
+---
 
-Python threading OR
-Celery + Redis (advanced)
-📦 PHASE 6: PACKAGING (Day 6–7)
-🖥️ Desktop App (Optional but 🔥)
+## 🗺️ Roadmap & Progress
 
-Use:
+- [x] Phase 1: Core Backend & API Design
+- [x] Phase 2: AI Engine Integration (Real-ESRGAN)
+- [x] Phase 3: React Frontend Dashboard
+- [x] Phase 4: Error Handling & Resilience
+- [ ] Phase 5: GPU/CUDA Optimization Flags
+- [ ] Phase 6: Batch Processing Mode
+- [ ] Phase 7: Electron Desktop Shell
 
-Electron + React
-🔧 Steps
-Build React app
-Connect FastAPI backend
-Wrap with Electron
-🔐 PHASE 7: EXTRA FEATURES (Resume Booster 🔥)
-Add these to stand out:
-✅ Video preview before/after
-✅ Resolution selector (720p / 1080p / 4K)
-✅ AI model switch
-✅ Drag-drop UI
-✅ Dark mode
-📊 FINAL ARCHITECTURE
-Frontend (React)
-        ↓
-Backend (FastAPI)
-        ↓
-Processing Layer
-   ├── FFmpeg
-   ├── Real-ESRGAN
-        ↓
-Storage (Frames + Output)
+---
+
+## 🤝 Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+*Created with ❤️ by Narvdeshwar*
