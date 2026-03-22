@@ -1,0 +1,76 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# Build and distribution directories
+dist/
+dist-ssr/
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# Python
+__pycache__/
+backend/__pycache__/
+*.py[cod]
+*$py.class
+backend/*.py[cod]
+.pytest_cache/
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+backend/venv/
+.env
+backend/.env
+frontend/.env
+env/
+ENV/
+.venv/
+.python-version
+
+# Large binaries and model weights
+*.pth
+backend/*.pth
+backend/RealESRGAN_x4.pth
+
+# Storage and temporary files
+storage/frames/*
+storage/output/*
+storage/uploads/*
+!storage/frames/.gitkeep
+!storage/output/.gitkeep
+!storage/uploads/.gitkeep
+
+# Editor and IDE directories
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Windows thumbnails
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
