@@ -19,12 +19,12 @@ This document tracks the evolution of the **Video Quality Enhancer**. Our focus 
 
 - [/] **Phase 4: Error Handling & Resilience**
   - Frame-level fallback mechanisms to prevent job crashes.
-  - Basic error propagation to UI.
+  - Basic error propagation to the UI.
   - *Next: Improved diagnostic logging and automatic retries.*
 
 - [x] **Phase 5: GPU/CUDA Optimization Flags (FP16 & Tiling)**
   - CUDA benchmarking active for kernel optimization.
-  - FFMPEG hardware acceleration presets.
+  - **FFmpeg** hardware acceleration presets.
   - Implemented **FP16 (Half-Precision)** and **Dynamic Tiling** (400px) in the AI engine to support low-VRAM GPUs.
 
 - [x] **Phase 6: Batch Processing Mode (Job Queue System)**
@@ -33,3 +33,5 @@ This document tracks the evolution of the **Video Quality Enhancer**. Our focus 
 
 ---
 *Last Updated: 2026-03-22*
+
+*Created with ❤️ by **Narvdeshwar***
