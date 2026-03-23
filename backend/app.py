@@ -136,6 +136,36 @@ async def download_output(job_id: str):
     path = os.path.join(OUTPUT_DIR, f"{job_id}_upscaled.mp4")
     return FileResponse(path, media_type="video/mp4", filename=f"upscaled_{jobs[job_id]['filename']}")
 
+@app.delete("/cleanup/{job_id}")
+async def cleanup_job(job_id: str):
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    job = jobs[job_id]
+    
+    # 1. Delete uploaded file
+    upload_path = job.get("path")
+    if upload_path and os.path.exists(upload_path):
+        os.remove(upload_path)
+    
+    # 2. Delete frames
+    input_frames_dir = os.path.join(FRAMES_DIR, f"{job_id}_input")
+    output_frames_dir = os.path.join(FRAMES_DIR, f"{job_id}_output")
+    if os.path.exists(input_frames_dir):
+        shutil.rmtree(input_frames_dir)
+    if os.path.exists(output_frames_dir):
+        shutil.rmtree(output_frames_dir)
+    
+    # 3. Delete output video
+    output_video_path = os.path.join(OUTPUT_DIR, f"{job_id}_upscaled.mp4")
+    if os.path.exists(output_video_path):
+        os.remove(output_video_path)
+    
+    # 4. Remove from jobs dict
+    del jobs[job_id]
+    
+    return {"status": "success", "message": f"Job {job_id} cleaned up"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

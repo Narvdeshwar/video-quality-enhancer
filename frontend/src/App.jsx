@@ -65,6 +65,47 @@ function App() {
     }, 1000);
   };
 
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [hasCleanedUp, setHasCleanedUp] = useState(false);
+
+  const handleDownload = () => {
+    // Trigger download
+    const link = document.createElement('a');
+    link.href = `${API_BASE}/download/${jobId}`;
+    link.setAttribute('download', `upscaled_${file.name}`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setIsDownloading(true);
+  };
+
+  const handleCleanup = async (shouldClean) => {
+    if (shouldClean) {
+      try {
+        await axios.delete(`${API_BASE}/cleanup/${jobId}`);
+        setHasCleanedUp(true);
+        // Automatically reset after a short delay
+        setTimeout(() => {
+          resetAll();
+        }, 1500);
+      } catch (err) {
+        console.error("Cleanup failed:", err);
+      }
+    } else {
+      resetAll();
+    }
+  };
+
+  const resetAll = () => {
+    setStep('upload');
+    setFile(null);
+    setJobId(null);
+    setProgress(0);
+    setStatus('');
+    setIsDownloading(false);
+    setHasCleanedUp(false);
+  };
+
   return (
     <div className="min-h-screen w-full bg-[#030304] text-white font-sans flex items-center justify-center p-6 relative overflow-hidden">
       {/* Premium Background Ambiance */}
@@ -192,27 +233,52 @@ function App() {
                   <CheckCircle className="w-12 h-12 text-green-500" />
                 </div>
                 <div className="space-y-3">
-                   <h2 className="text-4xl font-black tracking-tighter">Render Complete</h2>
-                   <p className="text-zinc-500 max-w-xs mx-auto text-sm leading-relaxed">Your video has been successfully upscaled and optimized for 4K playback.</p>
+                   <h2 className="text-4xl font-black tracking-tighter">{hasCleanedUp ? 'Storage Reclaimed' : 'Render Complete'}</h2>
+                   <p className="text-zinc-500 max-w-xs mx-auto text-sm leading-relaxed">
+                     {hasCleanedUp 
+                       ? 'Files have been deleted from the server. Resetting session...' 
+                       : 'Your video has been successfully upscaled and optimized for 4K playback.'}
+                   </p>
                 </div>
                 
-                <a 
-                  href={`${API_BASE}/download/${jobId}`}
-                  className="inline-flex items-center justify-center space-x-4 w-full py-6 bg-white text-black rounded-[24px] font-black text-xl hover:scale-[1.02] active:scale-95 transition-all shadow-[0_20px_50px_rgba(255,255,255,0.1)] group"
-                  download
-                >
-                  <Download className="w-6 h-6 group-hover:animate-bounce" />
-                  <span>EXPORT 4K MASTER</span>
-                </a>
+                {!isDownloading ? (
+                  <button 
+                    onClick={handleDownload}
+                    className="inline-flex items-center justify-center space-x-4 w-full py-6 bg-white text-black rounded-[24px] font-black text-xl hover:scale-[1.02] active:scale-95 transition-all shadow-[0_20px_50px_rgba(255,255,255,0.1)] group"
+                  >
+                    <Download className="w-6 h-6 group-hover:animate-bounce" />
+                    <span>EXPORT 4K MASTER</span>
+                  </button>
+                ) : !hasCleanedUp && (
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400">Download Started!</p>
+                    <div className="flex gap-4">
+                      <button 
+                        onClick={() => handleCleanup(true)}
+                        className="flex-1 py-4 bg-zinc-800 hover:bg-red-500/20 border border-white/5 hover:border-red-500/40 rounded-2xl text-xs font-black transition-all"
+                      >
+                        CLEAN SERVER STORAGE
+                      </button>
+                      <button 
+                        onClick={() => handleCleanup(false)}
+                        className="flex-1 py-4 bg-white text-black rounded-2xl text-xs font-black transition-all"
+                      >
+                        KEEP FILES
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <button 
-                onClick={() => { setStep('upload'); setFile(null); setJobId(null); setProgress(0); }}
-                className="inline-flex items-center space-x-3 text-zinc-500 hover:text-white transition-colors uppercase text-[10px] font-black tracking-[0.3em]"
-              >
-                <ArrowLeft className="w-3 h-3" />
-                <span>New Project Session</span>
-              </button>
+              {!isDownloading && (
+                <button 
+                  onClick={resetAll}
+                  className="inline-flex items-center space-x-3 text-zinc-500 hover:text-white transition-colors uppercase text-[10px] font-black tracking-[0.3em]"
+                >
+                  <ArrowLeft className="w-3 h-3" />
+                  <span>New Project Session</span>
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
