@@ -65,8 +65,10 @@ def process_video_task(job_id: str):
         job["status"] = "AI Upscaling"
         job["progress"] = 30
         
-        def update_progress(p):
+        def update_progress(p, current, total):
             job["progress"] = 30 + (p * 0.6)
+            job["current_frame"] = current
+            job["total_frames"] = total
             
         upscale_sequence(extract_dir, processed_dir, progress_callback=update_progress)
         
@@ -90,13 +92,23 @@ worker_thread.start()
 
 @app.post("/upload")
 async def upload_video(file: UploadFile = File(...)):
+    # Limit: 100MB (100 * 1024 * 1024 bytes)
+    MAX_SIZE = 100 * 1024 * 1024
+    
+    # We can check the size before saving
+    # FastAPI's UploadFile.size is the easiest way. 
+    # If not present, we check during the read/write process.
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=413, detail="File too large (Limit: 100MB)")
+    
     job_id = str(uuid.uuid4())
     filename = file.filename
     file_extension = os.path.splitext(filename)[1]
     file_path = os.path.join(UPLOAD_DIR, f"{job_id}{file_extension}")
     
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(content)
     
     jobs[job_id] = {
         "id": job_id,

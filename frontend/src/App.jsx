@@ -16,7 +16,13 @@ function App() {
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0] || e.dataTransfer?.files?.[0];
-    if (selectedFile) setFile(selectedFile);
+    if (selectedFile) {
+      if (selectedFile.size > 100 * 1024 * 1024) {
+        alert("File too large! Maximum limit is 100MB.");
+        return;
+      }
+      setFile(selectedFile);
+    }
   };
 
   const uploadFile = async () => {
@@ -44,13 +50,16 @@ function App() {
     }
   };
 
+  const [frameData, setFrameData] = useState({ current: 0, total: 0 });
+
   const pollProgress = (id) => {
     const interval = setInterval(async () => {
       try {
         const response = await axios.get(`${API_BASE}/progress/${id}`);
-        const { progress, status: jobStatus } = response.data;
+        const { progress, status: jobStatus, current_frame, total_frames } = response.data;
         setProgress(progress);
         setStatus(jobStatus);
+        setFrameData({ current: current_frame || 0, total: total_frames || 0 });
         if (jobStatus === 'completed') {
           clearInterval(interval);
           setStep('result');
@@ -160,7 +169,7 @@ function App() {
                       </div>
                       <div className="space-y-1">
                         <p className="text-zinc-400 font-bold">Drop your footage here</p>
-                        <p className="text-[10px] text-zinc-600 uppercase tracking-[.2em] font-black">MP4, MOV up to 4GB</p>
+                        <p className="text-[10px] text-zinc-600 uppercase tracking-[.2em] font-black">MP4, MOV up to 100MB</p>
                       </div>
                     </motion.div>
                   )}
@@ -205,10 +214,16 @@ function App() {
                   <div className="flex flex-col">
                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Compute Progress</span>
                     <span className="text-4xl font-black">{Math.round(progress)}<span className="text-zinc-600 text-xl ml-1">%</span></span>
+                    {/* Phase 6+: Detailed Frame Counter */}
+                    {status === 'AI Upscaling' && (
+                      <span className="text-[10px] text-blue-400 font-black mt-1 uppercase tracking-wider">
+                        Frame {frameData.current} / {frameData.total}
+                      </span>
+                    )}
                   </div>
                   <div className="text-right">
                     <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Active Task</span>
-                    <p className="text-sm font-bold text-white">X4 Neural Pass</p>
+                    <p className="text-sm font-bold text-white">{status || 'Processing...'}</p>
                   </div>
                 </div>
                 <div className="h-3 w-full bg-zinc-800/50 rounded-full overflow-hidden p-1 border border-white/5">

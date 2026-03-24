@@ -97,7 +97,7 @@ def upscale_image(image_path: str, output_path: str, upsampler):
         # Quick fallback if a specific frame fails
         Image.open(image_path).save(output_path)
 
-def upscale_sequence(frame_dir: str, output_dir: str, progress_callback: Optional[Callable[[float], None]] = None):
+def upscale_sequence(frame_dir: str, output_dir: str, progress_callback: Optional[Callable[[float, int, int], None]] = None):
     os.makedirs(output_dir, exist_ok=True)
     frames = sorted([f for f in os.listdir(frame_dir) if f.endswith('.png')])
     total_frames = len(frames)
@@ -113,10 +113,22 @@ def upscale_sequence(frame_dir: str, output_dir: str, progress_callback: Optiona
         output_p = os.path.join(output_dir, frame)
         
         if not os.path.exists(output_p):
-            upscale_image(input_p, output_p, model)
-        
+            # Phase 4: Automatic retry logic for specific frames
+            max_retries = 2
+            for attempt in range(max_retries + 1):
+                try:
+                    upscale_image(input_p, output_p, model)
+                    break 
+                except Exception as e:
+                    if attempt == max_retries:
+                        print(f"CRITICAL: Failed to upscale frame {frame} after {max_retries} retries. Using fallback.")
+                        import shutil
+                        shutil.copy(input_p, output_p)
+                    else:
+                        print(f"RETRY: Frame {frame} failed (attempt {attempt+1}). Retrying...")
+
         if progress_callback:
-            progress_callback(((i + 1) / total_frames) * 100)
+            progress_callback(((i + 1) / total_frames) * 100, i + 1, total_frames)
     
     if progress_callback:
-        progress_callback(100.0)
+        progress_callback(100.0, total_frames, total_frames)
