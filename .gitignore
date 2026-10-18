@@ -44,6 +44,7 @@ env/
 ENV/
 .venv/
 .python-version
+backend/.venv311/
 
 # Large binaries and model weights
 *.pth
